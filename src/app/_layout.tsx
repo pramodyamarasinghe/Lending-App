@@ -3,6 +3,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider, Stack, useRouter, useRootNaviga
 import { useColorScheme } from 'react-native';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { account, autoLoginWithSavedCredentials } from '@/lib/appwrite';
 
 export default function RootLayout() {
@@ -40,25 +41,29 @@ export default function RootLayout() {
 
   if (isLoading) {
     return (
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <View style={{ flex: 1, backgroundColor: '#208AEF' }} />
-      </ThemeProvider>
+      <SafeAreaProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <View style={{ flex: 1, backgroundColor: '#208AEF' }} />
+        </ThemeProvider>
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen 
-          name="index" 
-          options={{ gestureEnabled: false }}
-          listeners={{
-            beforeRemove: () => {},
-          }}
-        />
-        <Stack.Screen name="login" options={{ gestureEnabled: false }} />
-        <Stack.Screen name="signup" />
-      </Stack>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen 
+            name="index" 
+            options={{ gestureEnabled: false }}
+            listeners={{
+              beforeRemove: () => {},
+            }}
+          />
+          <Stack.Screen name="login" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="signup" />
+        </Stack>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

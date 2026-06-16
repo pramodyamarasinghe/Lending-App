@@ -13,9 +13,15 @@ import { useTheme } from '@/hooks/use-theme';
 
 export default function TabTwoScreen() {
   const safeAreaInsets = useSafeAreaInsets();
+  const safeBottom = safeAreaInsets?.bottom ?? 0;
+  const safeTop = safeAreaInsets?.top ?? 0;
+  const safeLeft = safeAreaInsets?.left ?? 0;
+  const safeRight = safeAreaInsets?.right ?? 0;
   const insets = {
-    ...safeAreaInsets,
-    bottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
+    top: safeTop,
+    left: safeLeft,
+    right: safeRight,
+    bottom: safeBottom + BottomTabInset + Spacing.three,
   };
   const theme = useTheme();
 

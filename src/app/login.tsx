@@ -49,11 +49,14 @@ export default function LoginScreen() {
     }
   }
 
+  const safeBottom = insets?.bottom ?? 0;
+  const safeTop = insets?.top ?? 0;
+
   return (
     <View
       style={[
         styles.page,
-        { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
+        { paddingTop: safeTop + 24, paddingBottom: safeBottom + 24 },
       ]}
     >
       <View style={styles.brandContainer}>

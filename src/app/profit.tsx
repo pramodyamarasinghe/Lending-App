@@ -14,12 +14,14 @@ export default function ProfitScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const contentPaddingBottom = insets.bottom + 110;
+  const safeBottom = insets?.bottom ?? 0;
+  const safeTop = insets?.top ?? 0;
+  const contentPaddingBottom = safeBottom + 110;
   const pageHorizontalPadding = width > 760 ? 32 : 24;
   const maxContentWidth = width > 840 ? 760 : "100%";
 
   return (
-    <View style={[styles.page, { paddingTop: insets.top + 24 }]}>
+    <View style={[styles.page, { paddingTop: safeTop + 24 }]}>
       <ScrollView
         contentContainerStyle={[
           styles.container,

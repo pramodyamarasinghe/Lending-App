@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const metrics = [
   {
     title: "Portfolio Value",
-    value: "$54,420,000",
+    value: "Rs. 54,420,000",
     subtitle: "+12.4% MoM",
     accent: "#3d5afe",
   },
@@ -28,19 +28,19 @@ const metrics = [
   },
   {
     title: "Collections Today",
-    value: "$186,500",
-    subtitle: "vs $160k target",
+    value: "Rs. 186,500",
+    subtitle: "vs Rs. 160k target",
     accent: "#2ecc71",
   },
   {
     title: "Cash Position",
-    value: "$2,840,000",
+    value: "Rs. 2,840,000",
     subtitle: "Across 5 branches",
     accent: "#208ae5",
   },
   {
     title: "Outstanding",
-    value: "$8,120,000",
+    value: "Rs. 8,120,000",
     subtitle: "3.2% of portfolio",
     accent: "#8e44ad",
   },
@@ -52,9 +52,14 @@ const metrics = [
   },
 ];
 
-const chartData = [
-  { label: "Collected", color: "#3d5afe" },
-  { label: "Target", color: "#d9e4ff" },
+const collectionsTrendData = [
+  { day: "Mon", collected: 24500, target: 30000, date: "Monday, Jun 10" },
+  { day: "Tue", collected: 32000, target: 30000, date: "Tuesday, Jun 11" },
+  { day: "Wed", collected: 29800, target: 30000, date: "Wednesday, Jun 12" },
+  { day: "Thu", collected: 38500, target: 30000, date: "Thursday, Jun 13" },
+  { day: "Fri", collected: 15400, target: 30000, date: "Friday, Jun 14" },
+  { day: "Sat", collected: 42000, target: 35000, date: "Saturday, Jun 15" },
+  { day: "Sun", collected: 48600, target: 35000, date: "Sunday, Jun 16" },
 ];
 
 export default function HomeScreen() {
@@ -63,9 +68,12 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<BottomTabKey>("overview");
+  const [selectedDayIndex, setSelectedDayIndex] = useState(6);
   const isCompact = width < 520;
   const cardWidth = isCompact ? "100%" : "48%";
-  const contentPaddingBottom = insets.bottom + 110;
+  const safeBottom = insets?.bottom ?? 0;
+  const safeTop = insets?.top ?? 0;
+  const contentPaddingBottom = safeBottom + 110;
 
   async function handleLogout() {
     setLoading(true);
@@ -82,13 +90,18 @@ export default function HomeScreen() {
     }
   }
 
+  const selectedDay = collectionsTrendData[selectedDayIndex];
+  const percentDiff = ((selectedDay.collected - selectedDay.target) / selectedDay.target) * 100;
+  const isSurpassed = selectedDay.collected >= selectedDay.target;
+  const diffText = `${isSurpassed ? "+" : ""}${percentDiff.toFixed(1)}%`;
+
   return (
     <View style={styles.page}>
       <ScrollView
         contentContainerStyle={[
           styles.contentContainer,
           {
-            paddingTop: insets.top + 16,
+            paddingTop: safeTop + 16,
             paddingBottom: contentPaddingBottom,
             paddingHorizontal: isCompact ? 16 : 24,
           },
@@ -122,57 +135,103 @@ export default function HomeScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Collections Trend</Text>
             <Text style={styles.sectionCaption}>
-              Last 7 days · all branches
+              Last 7 days · Tap a day to inspect details
             </Text>
           </View>
 
-          <View style={styles.chartPlaceholder}>
-            <View style={[styles.chartLine, { width: "24%", left: "4%" }]} />
-            <View style={[styles.chartLine, { width: "30%", left: "18%" }]} />
-            <View style={[styles.chartLine, { width: "22%", left: "42%" }]} />
-            <View style={[styles.chartLine, { width: "18%", left: "62%" }]} />
-            <View style={[styles.chartLine, { width: "28%", left: "78%" }]} />
-          </View>
-
-          <View style={styles.chartLegendRow}>
-            {chartData.map((item) => (
-              <View key={item.label} style={styles.legendItem}>
-                <View
-                  style={[styles.legendDot, { backgroundColor: item.color }]}
-                />
-                <Text style={styles.legendLabel}>{item.label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Branch Performance</Text>
-            <Text style={styles.sectionCaption}>
-              Portfolio value & recovery rate
-            </Text>
-          </View>
-
-          <View style={styles.barChartRow}>
-            {[
-              { label: "Colombo Central", value: 18 },
-              { label: "Kandy Branch", value: 12 },
-              { label: "Galle Branch", value: 10 },
-              { label: "Jaffna Branch", value: 6 },
-              { label: "Negombo Branch", value: 8 },
-            ].map((branch) => (
-              <View key={branch.label} style={styles.barItem}>
-                <View
-                  style={[styles.bar, { height: `${branch.value * 4}%` }]}
-                />
-                <Text style={styles.barLabel} numberOfLines={2}>
-                  {branch.label}
+          {/* Dynamic Details Panel */}
+          <View style={styles.activeDayDetailCard}>
+            <View style={styles.detailHeaderRow}>
+              <Text style={styles.detailDateText}>{selectedDay.date}</Text>
+              <View style={[
+                styles.statusBadge,
+                isSurpassed ? styles.statusBadgeSurpassed : styles.statusBadgeBelow
+              ]}>
+                <Text style={[
+                  styles.statusBadgeText,
+                  isSurpassed ? styles.statusBadgeTextSurpassed : styles.statusBadgeTextBelow
+                ]}>
+                  {isSurpassed ? "Surpassed" : "Below Target"} ({diffText})
                 </Text>
               </View>
-            ))}
+            </View>
+
+            <View style={styles.detailStatsRow}>
+              <View style={styles.statColumn}>
+                <Text style={styles.statLabel}>COLLECTED</Text>
+                <Text style={styles.statValue}>
+                  Rs. {selectedDay.collected.toLocaleString()}
+                </Text>
+              </View>
+              <View style={styles.statColumn}>
+                <Text style={styles.statLabel}>TARGET</Text>
+                <Text style={[styles.statValue, styles.statValueSecondary]}>
+                  Rs. {selectedDay.target.toLocaleString()}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Interactive Custom Bar Chart */}
+          <View style={styles.interactiveChartContainer}>
+            {collectionsTrendData.map((item, idx) => {
+              const isActive = idx === selectedDayIndex;
+              const maxVal = 55000;
+              const collectedHeight = Math.min((item.collected / maxVal) * 100, 100);
+              const targetHeight = Math.min((item.target / maxVal) * 100, 100);
+
+              return (
+                <Pressable
+                  key={item.day}
+                  onPress={() => setSelectedDayIndex(idx)}
+                  style={styles.chartColButton}
+                >
+                  <View style={[
+                    styles.chartColTrack,
+                    isActive && styles.chartColTrackActive
+                  ]}>
+                    {/* Target indicator line */}
+                    <View style={[
+                      styles.chartTargetLine,
+                      { bottom: `${targetHeight}%` }
+                    ]} />
+
+                    {/* Collected Bar */}
+                    <View style={[
+                      styles.chartCollectedBar,
+                      { height: `${collectedHeight}%` },
+                      isActive ? styles.chartCollectedBarActive : styles.chartCollectedBarInactive,
+                      item.collected >= item.target ? styles.barSurpassedColor : styles.barBelowColor
+                    ]} />
+                  </View>
+                  <Text style={[
+                    styles.chartDayLabel,
+                    isActive && styles.chartDayLabelActive
+                  ]}>
+                    {item.day}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Legends */}
+          <View style={styles.chartLegendRow}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: "#3366ff" }]} />
+              <Text style={styles.legendLabel}>Surpassed Target</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: "#ff4d4f" }]} />
+              <Text style={styles.legendLabel}>Below Target</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={styles.legendTargetLine} />
+              <Text style={styles.legendLabel}>Target Line</Text>
+            </View>
           </View>
         </View>
+
         <Pressable
           onPress={handleLogout}
           disabled={loading}
@@ -189,10 +248,7 @@ export default function HomeScreen() {
         </Pressable>
       </ScrollView>
 
-      <View style={[styles.tabBarContainer, styles.glassContainer]}>
-        <View style={styles.glassBackground} />
-        <BottomTabBar activeTab={activeTab} />
-      </View>
+      <BottomTabBar activeTab={activeTab} />
     </View>
   );
 }
@@ -332,26 +388,13 @@ const styles = StyleSheet.create({
     color: "#6b7a99",
     marginTop: 6,
   },
-  chartPlaceholder: {
-    height: 170,
-    borderRadius: 20,
-    backgroundColor: "#f4f7ff",
-    overflow: "hidden",
-    justifyContent: "flex-end",
-    paddingVertical: 16,
-  },
-  chartLine: {
-    position: "absolute",
-    bottom: 0,
-    height: 80,
-    borderRadius: 14,
-    backgroundColor: "#3366ff",
-  },
   chartLegendRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 16,
     marginTop: 18,
+    flexWrap: "wrap",
   },
   legendItem: {
     flexDirection: "row",
@@ -365,64 +408,136 @@ const styles = StyleSheet.create({
   },
   legendLabel: {
     fontSize: 13,
-    color: "#5f6fc1",
+    color: "#6b7a99",
+    fontWeight: "500",
   },
-  navGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 16,
-    marginTop: 16,
+  legendTargetLine: {
+    width: 16,
+    height: 2,
+    backgroundColor: "#ffa940",
+    borderRadius: 1,
   },
-  navCard: {
+  activeDayDetailCard: {
     backgroundColor: "#f4f7ff",
     borderRadius: 20,
-    padding: 18,
-    flexBasis: "48%",
-    minWidth: "48%",
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(51, 102, 255, 0.08)",
+  },
+  detailHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 15,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    flexWrap: "wrap",
+    gap: 8,
   },
-  navCardPressed: {
-    opacity: 0.8,
-  },
-  navTitle: {
-    fontSize: 16,
+  detailDateText: {
+    fontSize: 15,
     fontWeight: "700",
     color: "#192a4a",
-    marginBottom: 6,
   },
-  navSubtitle: {
-    fontSize: 13,
-    color: "#5f6fc1",
-    lineHeight: 18,
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  barChartRow: {
+  statusBadgeSurpassed: {
+    backgroundColor: "rgba(46, 204, 113, 0.15)",
+  },
+  statusBadgeBelow: {
+    backgroundColor: "rgba(255, 77, 79, 0.15)",
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  statusBadgeTextSurpassed: {
+    color: "#27ae60",
+  },
+  statusBadgeTextBelow: {
+    color: "#ff4d4f",
+  },
+  detailStatsRow: {
+    flexDirection: "row",
+    gap: 24,
+  },
+  statColumn: {
+    flex: 1,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#8a92a6",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#3366ff",
+  },
+  statValueSecondary: {
+    color: "#192a4a",
+  },
+  interactiveChartContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    gap: 16,
-    marginTop: 16,
+    height: 180,
+    paddingVertical: 10,
   },
-  barItem: {
-    alignItems: "center",
+  chartColButton: {
     flex: 1,
+    alignItems: "center",
   },
-  bar: {
+  chartColTrack: {
+    width: 24,
+    height: 140,
+    backgroundColor: "#f4f7ff",
+    borderRadius: 12,
+    overflow: "hidden",
+    position: "relative",
+    justifyContent: "flex-end",
+  },
+  chartColTrackActive: {
+    backgroundColor: "#e8efff",
+    borderWidth: 1,
+    borderColor: "rgba(51, 102, 255, 0.3)",
+  },
+  chartTargetLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: "#ffa940",
+    zIndex: 2,
+  },
+  chartCollectedBar: {
     width: "100%",
-    maxWidth: 38,
-    backgroundColor: "#3d5afe",
-    borderRadius: 16,
-    marginBottom: 12,
+    borderRadius: 8,
   },
-  barLabel: {
-    textAlign: "center",
+  chartCollectedBarActive: {
+    opacity: 1,
+  },
+  chartCollectedBarInactive: {
+    opacity: 0.75,
+  },
+  barSurpassedColor: {
+    backgroundColor: "#3366ff",
+  },
+  barBelowColor: {
+    backgroundColor: "#ff4d4f",
+  },
+  chartDayLabel: {
     fontSize: 12,
-    color: "#6b7a99",
-    lineHeight: 16,
+    fontWeight: "600",
+    color: "#8a92a6",
+    marginTop: 8,
+  },
+  chartDayLabelActive: {
+    color: "#3366ff",
+    fontWeight: "700",
   },
 });
