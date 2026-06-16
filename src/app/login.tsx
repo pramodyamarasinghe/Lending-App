@@ -8,14 +8,19 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const cardMaxWidth = width > 420 ? 420 : "100%";
 
   async function handleLogin() {
     if (!email || !password) {
@@ -45,7 +50,12 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.page}>
+    <View
+      style={[
+        styles.page,
+        { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
+      ]}
+    >
       <View style={styles.brandContainer}>
         <Image
           source={require("../../assets/images/LendingApplogo.png")}
@@ -53,7 +63,12 @@ export default function LoginScreen() {
         />
       </View>
 
-      <View style={styles.card}>
+      <View
+        style={[
+          styles.card,
+          { width: "100%", maxWidth: cardMaxWidth, alignSelf: "center" },
+        ]}
+      >
         <Text style={styles.heading}>Welcome back</Text>
         <Text style={styles.subheading}>
           Enter your credentials to continue.
