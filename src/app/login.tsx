@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useColorScheme,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -21,6 +22,20 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const cardMaxWidth = width > 420 ? 420 : "100%";
+
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  const colors = {
+    bg: isDark ? "#0f172a" : "#ecf2ff",
+    cardBg: isDark ? "#1e293b" : "#ffffff",
+    titleText: isDark ? "#ffffff" : "#192a4a",
+    bodyText: isDark ? "#94a3b8" : "#6b7a99",
+    inputText: isDark ? "#ffffff" : "#1b264d",
+    inputBg: isDark ? "#0f172a" : "#f4f7ff",
+    inputPlaceholder: isDark ? "#475569" : "#7a859d",
+    linkText: isDark ? "#94a3b8" : "#5f6fc1",
+  };
 
   async function handleLogin() {
     if (!email || !password) {
@@ -56,7 +71,7 @@ export default function LoginScreen() {
     <View
       style={[
         styles.page,
-        { paddingTop: safeTop + 24, paddingBottom: safeBottom + 24 },
+        { paddingTop: safeTop + 24, paddingBottom: safeBottom + 24, backgroundColor: colors.bg },
       ]}
     >
       <View style={styles.brandContainer}>
@@ -69,11 +84,11 @@ export default function LoginScreen() {
       <View
         style={[
           styles.card,
-          { width: "100%", maxWidth: cardMaxWidth, alignSelf: "center" },
+          { width: "100%", maxWidth: cardMaxWidth, alignSelf: "center", backgroundColor: colors.cardBg },
         ]}
       >
-        <Text style={styles.heading}>Welcome back</Text>
-        <Text style={styles.subheading}>
+        <Text style={[styles.heading, { color: colors.titleText }]}>Welcome back</Text>
+        <Text style={[styles.subheading, { color: colors.bodyText }]}>
           Enter your credentials to continue.
         </Text>
 
@@ -83,16 +98,16 @@ export default function LoginScreen() {
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
-          style={styles.input}
-          placeholderTextColor="#7a859d"
+          style={[styles.input, { backgroundColor: colors.inputBg, color: colors.inputText }]}
+          placeholderTextColor={colors.inputPlaceholder}
         />
         <TextInput
           placeholder="Password"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          style={styles.input}
-          placeholderTextColor="#7a859d"
+          style={[styles.input, { backgroundColor: colors.inputBg, color: colors.inputText }]}
+          placeholderTextColor={colors.inputPlaceholder}
         />
 
         <Pressable
@@ -113,7 +128,7 @@ export default function LoginScreen() {
           onPress={() => router.push("/signup")}
           style={styles.linkButton}
         >
-          <Text style={styles.linkButtonText}>Create a new account</Text>
+          <Text style={[styles.linkButtonText, { color: colors.linkText }]}>Create a new account</Text>
         </Pressable>
       </View>
     </View>

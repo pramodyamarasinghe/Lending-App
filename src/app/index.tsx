@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useColorScheme,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -69,6 +70,22 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<BottomTabKey>("overview");
   const [selectedDayIndex, setSelectedDayIndex] = useState(6);
+
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  const colors = {
+    bg: isDark ? "#0f172a" : "#ecf2ff",
+    cardBg: isDark ? "#1e293b" : "#ffffff",
+    titleText: isDark ? "#ffffff" : "#192a4a",
+    bodyText: isDark ? "#94a3b8" : "#6b7a99",
+    subtleText: isDark ? "#64748b" : "#8a92a6",
+    trackBg: isDark ? "#0f172a" : "#f4f7ff",
+    trackActiveBg: isDark ? "#1e293b" : "#e8efff",
+    detailCardBg: isDark ? "#0f172a" : "#f4f7ff",
+    borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(51, 102, 255, 0.08)",
+    chartActiveBorder: isDark ? "rgba(51, 102, 255, 0.6)" : "rgba(51, 102, 255, 0.3)",
+  };
   const isCompact = width < 520;
   const cardWidth = isCompact ? "100%" : "48%";
   const safeBottom = insets?.bottom ?? 0;
@@ -96,7 +113,7 @@ export default function HomeScreen() {
   const diffText = `${isSurpassed ? "+" : ""}${percentDiff.toFixed(1)}%`;
 
   return (
-    <View style={styles.page}>
+    <View style={[styles.page, { backgroundColor: colors.bg }]}>
       <ScrollView
         contentContainerStyle={[
           styles.contentContainer,
@@ -111,7 +128,7 @@ export default function HomeScreen() {
           <View
             style={[styles.headerTop, isCompact && styles.headerTopCompact]}
           >
-            <Text style={styles.pageTitle}>Dashboard</Text>
+            <Text style={[styles.pageTitle, { color: colors.titleText }]}>Dashboard</Text>
           </View>
         </View>
 
@@ -119,30 +136,30 @@ export default function HomeScreen() {
           {metrics.map((item) => (
             <View
               key={item.title}
-              style={[styles.metricCard, { width: cardWidth }]}
+              style={[styles.metricCard, { width: cardWidth, backgroundColor: colors.cardBg }]}
             >
               <View
                 style={[styles.metricAccent, { backgroundColor: item.accent }]}
               />
-              <Text style={styles.metricTitle}>{item.title}</Text>
-              <Text style={styles.metricValue}>{item.value}</Text>
-              <Text style={styles.metricSubtitle}>{item.subtitle}</Text>
+              <Text style={[styles.metricTitle, { color: colors.subtleText }]}>{item.title}</Text>
+              <Text style={[styles.metricValue, { color: colors.titleText }]}>{item.value}</Text>
+              <Text style={[styles.metricSubtitle, { color: colors.bodyText }]}>{item.subtitle}</Text>
             </View>
           ))}
         </View>
 
-        <View style={styles.sectionCard}>
+        <View style={[styles.sectionCard, { backgroundColor: colors.cardBg }]}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Collections Trend</Text>
-            <Text style={styles.sectionCaption}>
+            <Text style={[styles.sectionTitle, { color: colors.titleText }]}>Collections Trend</Text>
+            <Text style={[styles.sectionCaption, { color: colors.bodyText }]}>
               Last 7 days · Tap a day to inspect details
             </Text>
           </View>
 
           {/* Dynamic Details Panel */}
-          <View style={styles.activeDayDetailCard}>
+          <View style={[styles.activeDayDetailCard, { backgroundColor: colors.detailCardBg, borderColor: colors.borderColor }]}>
             <View style={styles.detailHeaderRow}>
-              <Text style={styles.detailDateText}>{selectedDay.date}</Text>
+              <Text style={[styles.detailDateText, { color: colors.titleText }]}>{selectedDay.date}</Text>
               <View style={[
                 styles.statusBadge,
                 isSurpassed ? styles.statusBadgeSurpassed : styles.statusBadgeBelow
@@ -158,14 +175,14 @@ export default function HomeScreen() {
 
             <View style={styles.detailStatsRow}>
               <View style={styles.statColumn}>
-                <Text style={styles.statLabel}>COLLECTED</Text>
+                <Text style={[styles.statLabel, { color: colors.subtleText }]}>COLLECTED</Text>
                 <Text style={styles.statValue}>
                   Rs. {selectedDay.collected.toLocaleString()}
                 </Text>
               </View>
               <View style={styles.statColumn}>
-                <Text style={styles.statLabel}>TARGET</Text>
-                <Text style={[styles.statValue, styles.statValueSecondary]}>
+                <Text style={[styles.statLabel, { color: colors.subtleText }]}>TARGET</Text>
+                <Text style={[styles.statValue, styles.statValueSecondary, { color: colors.titleText }]}>
                   Rs. {selectedDay.target.toLocaleString()}
                 </Text>
               </View>
@@ -188,7 +205,8 @@ export default function HomeScreen() {
                 >
                   <View style={[
                     styles.chartColTrack,
-                    isActive && styles.chartColTrackActive
+                    { backgroundColor: colors.trackBg },
+                    isActive && [styles.chartColTrackActive, { backgroundColor: colors.trackActiveBg, borderColor: colors.chartActiveBorder }]
                   ]}>
                     {/* Target indicator line */}
                     <View style={[
@@ -206,6 +224,7 @@ export default function HomeScreen() {
                   </View>
                   <Text style={[
                     styles.chartDayLabel,
+                    { color: colors.subtleText },
                     isActive && styles.chartDayLabelActive
                   ]}>
                     {item.day}
@@ -219,15 +238,15 @@ export default function HomeScreen() {
           <View style={styles.chartLegendRow}>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: "#3366ff" }]} />
-              <Text style={styles.legendLabel}>Surpassed Target</Text>
+              <Text style={[styles.legendLabel, { color: colors.bodyText }]}>Surpassed Target</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: "#ff4d4f" }]} />
-              <Text style={styles.legendLabel}>Below Target</Text>
+              <Text style={[styles.legendLabel, { color: colors.bodyText }]}>Below Target</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={styles.legendTargetLine} />
-              <Text style={styles.legendLabel}>Target Line</Text>
+              <Text style={[styles.legendLabel, { color: colors.bodyText }]}>Target Line</Text>
             </View>
           </View>
         </View>

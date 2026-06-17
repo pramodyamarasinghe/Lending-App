@@ -12,6 +12,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useColorScheme,
   useWindowDimensions,
   View
 } from "react-native";
@@ -35,6 +36,33 @@ export default function CustomersScreen() {
   const safeBottom = insets?.bottom ?? 0;
   const safeTop = insets?.top ?? 0;
   const contentPaddingBottom = safeBottom + 110;
+
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  const colors = {
+    bg: isDark ? "#0f172a" : "#ecf2ff",
+    cardBg: isDark ? "#1e293b" : "#ffffff",
+    titleText: isDark ? "#ffffff" : "#192a4a",
+    bodyText: isDark ? "#94a3b8" : "#5f6fc1",
+    subtleText: isDark ? "#64748b" : "#8a92a6",
+    inputText: isDark ? "#ffffff" : "#192a4a",
+    inputBg: isDark ? "#0f172a" : "#f4f7ff",
+    inputPlaceholder: isDark ? "#475569" : "#7a859d",
+    borderColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.04)",
+    borderColorLight: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.03)",
+    tableHeaderBg: isDark ? "#0f172a" : "#fcfdff",
+    searchBoxBg: isDark ? "#1e293b" : "#ffffff",
+    filterBtnBg: isDark ? "#1e293b" : "#ffffff",
+    filterBtnActiveBg: isDark ? "rgba(51, 102, 255, 0.15)" : "#f0f4ff",
+    filterBtnBorderActive: isDark ? "rgba(51, 102, 255, 0.4)" : "rgba(51, 102, 255, 0.2)",
+    filterOptionBg: isDark ? "#0f172a" : "#f4f7ff",
+    filterOptionActiveBg: isDark ? "rgba(51, 102, 255, 0.15)" : "#e8efff",
+    filterOptionActiveBorder: isDark ? "rgba(51, 102, 255, 0.4)" : "rgba(51, 102, 255, 0.25)",
+    filterOptionText: isDark ? "#94a3b8" : "#6b7a99",
+    closeBtnBorder: isDark ? "#475569" : "#3366ff",
+    closeBtnText: isDark ? "#94a3b8" : "#3366ff",
+  };
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +113,7 @@ export default function CustomersScreen() {
       mapped.sort((a, b) => b.id.localeCompare(a.id));
       setCustomers(mapped);
     } catch (err: any) {
-      console.error("loadCustomerData error:", err);
+      console.log("loadCustomerData error:", err);
       Alert.alert(
         "Database Status",
         "Could not load data from Appwrite. Make sure your database and columns are set up and permissions are configured."
@@ -118,7 +146,7 @@ export default function CustomersScreen() {
     if (customer.status === "Active" && customer.risk === "Low") {
       return "rgba(46, 204, 113, 0.09)"; // faded green (9% opacity)
     }
-    return "#ffffff"; // neutral white
+    return colors.cardBg; // neutral themed card
   };
 
   const renderEmptyView = () => {
@@ -182,7 +210,7 @@ export default function CustomersScreen() {
       Alert.alert("Success", `Customer ${newCustomer.name} has been added to the database!`);
       await loadCustomerData();
     } catch (err: any) {
-      console.error("Add customer error:", err);
+      console.log("Add customer error:", err);
       Alert.alert("Database Error", err.message || "Failed to create customer record in Appwrite.");
     } finally {
       setLoading(false);
@@ -198,7 +226,7 @@ export default function CustomersScreen() {
   };
 
   return (
-    <View style={styles.page}>
+    <View style={[styles.page, { backgroundColor: colors.bg }]}>
       <ScrollView
         contentContainerStyle={[
           styles.container,
@@ -214,8 +242,8 @@ export default function CustomersScreen() {
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.headerTitleContainer}>
-            <Text style={styles.title}>Customers</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.title, { color: colors.titleText }]}>Customers</Text>
+            <Text style={[styles.subtitle, { color: colors.bodyText }]}>
               {customers.length} registered customers
             </Text>
           </View>
@@ -233,21 +261,22 @@ export default function CustomersScreen() {
 
         {/* Search & Filter Bar */}
         <View style={styles.searchBarContainer}>
-          <View style={styles.searchBox}>
-            <Ionicons name="search" size={20} color="#7a859d" style={styles.searchIcon} />
+          <View style={[styles.searchBox, { backgroundColor: colors.searchBoxBg }]}>
+            <Ionicons name="search" size={20} color={isDark ? "#64748b" : "#7a859d"} style={styles.searchIcon} />
             <TextInput
               placeholder="Search by name, NIC, phone..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              style={styles.searchInput}
-              placeholderTextColor="#7a859d"
+              style={[styles.searchInput, { color: colors.inputText }]}
+              placeholderTextColor={colors.inputPlaceholder}
             />
           </View>
 
           <Pressable
             style={({ pressed }) => [
               styles.filterBtn,
-              showFiltersPanel && styles.filterBtnActive,
+              { backgroundColor: colors.filterBtnBg },
+              showFiltersPanel && [styles.filterBtnActive, { backgroundColor: colors.filterBtnActiveBg, borderColor: colors.filterBtnBorderActive }],
               pressed && styles.buttonPressed,
             ]}
             onPress={() => setShowFiltersPanel(!showFiltersPanel)}
@@ -255,11 +284,12 @@ export default function CustomersScreen() {
             <Ionicons
               name={showFiltersPanel ? "funnel" : "funnel-outline"}
               size={18}
-              color={showFiltersPanel ? "#3366ff" : "#5f6fc1"}
+              color={showFiltersPanel ? "#3366ff" : (isDark ? "#94a3b8" : "#5f6fc1")}
             />
             <Text
               style={[
                 styles.filterBtnText,
+                { color: isDark ? "#94a3b8" : "#5f6fc1" },
                 showFiltersPanel && styles.filterBtnTextActive,
               ]}
             >
@@ -267,16 +297,16 @@ export default function CustomersScreen() {
             </Text>
           </Pressable>
 
-          <Text style={styles.resultsText}>
+          <Text style={[styles.resultsText, { color: colors.subtleText }]}>
             {filteredCustomers.length} result{filteredCustomers.length !== 1 ? "s" : ""}
           </Text>
         </View>
 
         {/* Filter Selection Panel */}
         {showFiltersPanel && (
-          <View style={styles.filtersPanel}>
+          <View style={[styles.filtersPanel, { backgroundColor: colors.cardBg }]}>
             <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Status</Text>
+              <Text style={[styles.filterSectionTitle, { color: colors.subtleText }]}>Status</Text>
               <View style={styles.filterOptions}>
                 {(["All", "Active", "Overdue"] as const).map((opt) => (
                   <Pressable
@@ -284,12 +314,14 @@ export default function CustomersScreen() {
                     onPress={() => setFilterStatus(opt)}
                     style={[
                       styles.filterOptionItem,
-                      filterStatus === opt && styles.filterOptionItemActive,
+                      { backgroundColor: colors.filterOptionBg },
+                      filterStatus === opt && [styles.filterOptionItemActive, { backgroundColor: colors.filterOptionActiveBg, borderColor: colors.filterOptionActiveBorder }],
                     ]}
                   >
                     <Text
                       style={[
                         styles.filterOptionText,
+                        { color: colors.filterOptionText },
                         filterStatus === opt && styles.filterOptionTextActive,
                       ]}
                     >
@@ -301,7 +333,7 @@ export default function CustomersScreen() {
             </View>
 
             <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Risk Assessment</Text>
+              <Text style={[styles.filterSectionTitle, { color: colors.subtleText }]}>Risk Assessment</Text>
               <View style={styles.filterOptions}>
                 {(["All", "Low", "Medium", "High"] as const).map((opt) => (
                   <Pressable
@@ -309,12 +341,14 @@ export default function CustomersScreen() {
                     onPress={() => setFilterRisk(opt)}
                     style={[
                       styles.filterOptionItem,
-                      filterRisk === opt && styles.filterOptionItemActive,
+                      { backgroundColor: colors.filterOptionBg },
+                      filterRisk === opt && [styles.filterOptionItemActive, { backgroundColor: colors.filterOptionActiveBg, borderColor: colors.filterOptionActiveBorder }],
                     ]}
                   >
                     <Text
                       style={[
                         styles.filterOptionText,
+                        { color: colors.filterOptionText },
                         filterRisk === opt && styles.filterOptionTextActive,
                       ]}
                     >
@@ -328,7 +362,7 @@ export default function CustomersScreen() {
         )}
 
         {/* Customers Grid/List */}
-        <View style={styles.customersCard}>
+        <View style={[styles.customersCard, { backgroundColor: colors.cardBg }]}>
           {isCompact ? (
             /* Compact Mobile Layout */
             <View style={styles.compactList}>
@@ -339,13 +373,13 @@ export default function CustomersScreen() {
                     onPress={() => openDetails(customer)}
                     style={({ pressed }) => [
                       styles.compactRow,
-                      idx !== filteredCustomers.length - 1 && styles.borderBottom,
-                      { backgroundColor: pressed ? "#f0f4ff" : getRowBackgroundColor(customer) },
+                      idx !== filteredCustomers.length - 1 && [styles.borderBottom, { borderColor: colors.borderColor }],
+                      { backgroundColor: pressed ? (isDark ? "rgba(51, 102, 255, 0.15)" : "#f0f4ff") : getRowBackgroundColor(customer) },
                     ]}
                   >
                     <View style={styles.compactBody}>
                       <View style={styles.compactNameRow}>
-                        <Text style={styles.customerName}>{customer.name}</Text>
+                        <Text style={[styles.customerName, { color: colors.titleText }]}>{customer.name}</Text>
                         <View style={styles.badgeRow}>
                           <View
                             style={[
@@ -391,33 +425,33 @@ export default function CustomersScreen() {
                           </View>
                         </View>
                       </View>
-                      <Text style={styles.customerId}>{customer.id}</Text>
+                      <Text style={[styles.customerId, { color: colors.subtleText }]}>{customer.id}</Text>
                       <View style={styles.compactDetailsGrid}>
-                        <Text style={styles.compactDetailText}>NIC: {customer.nic}</Text>
-                        <Text style={styles.compactDetailText}>Phone: {customer.phone}</Text>
-                        <Text style={styles.compactDetailText}>Address: {customer.address}</Text>
+                        <Text style={[styles.compactDetailText, { color: colors.bodyText }]}>NIC: {customer.nic}</Text>
+                        <Text style={[styles.compactDetailText, { color: colors.bodyText }]}>Phone: {customer.phone}</Text>
+                        <Text style={[styles.compactDetailText, { color: colors.bodyText }]}>Address: {customer.address}</Text>
                       </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color="#a0aec0" style={styles.chevronIcon} />
+                    <Ionicons name="chevron-forward" size={18} color={isDark ? "#64748b" : "#a0aec0"} style={styles.chevronIcon} />
                   </Pressable>
                 ))
               ) : (
                 <View style={styles.emptyView}>
-                  <Ionicons name="people-outline" size={48} color="#a0aec0" />
-                  <Text style={styles.emptyText}>No customers found matching filters.</Text>
+                  <Ionicons name="people-outline" size={48} color={isDark ? "#64748b" : "#a0aec0"} />
+                  <Text style={[styles.emptyText, { color: colors.subtleText }]}>No customers found matching filters.</Text>
                 </View>
               )}
             </View>
           ) : (
             /* Wide Screen Table Layout */
             <View style={styles.table}>
-              <View style={styles.tableHeader}>
-                <Text style={[styles.th, { flex: 2.5 }]}>Customer</Text>
-                <Text style={[styles.th, { flex: 1.5 }]}>NIC</Text>
-                <Text style={[styles.th, { flex: 2 }]}>Phone</Text>
-                <Text style={[styles.th, { flex: 1.5 }]}>Address</Text>
-                <Text style={[styles.th, { flex: 1 }]}>Risk</Text>
-                <Text style={[styles.th, { flex: 1.2 }]}>Status</Text>
+              <View style={[styles.tableHeader, { backgroundColor: colors.tableHeaderBg, borderColor: colors.borderColorLight }]}>
+                <Text style={[styles.th, { flex: 2.5, color: colors.subtleText }]}>Customer</Text>
+                <Text style={[styles.th, { flex: 1.5, color: colors.subtleText }]}>NIC</Text>
+                <Text style={[styles.th, { flex: 2, color: colors.subtleText }]}>Phone</Text>
+                <Text style={[styles.th, { flex: 1.5, color: colors.subtleText }]}>Address</Text>
+                <Text style={[styles.th, { flex: 1, color: colors.subtleText }]}>Risk</Text>
+                <Text style={[styles.th, { flex: 1.2, color: colors.subtleText }]}>Status</Text>
                 <Text style={[styles.th, { flex: 0.8, textAlign: "right" }]}></Text>
               </View>
 
@@ -427,19 +461,19 @@ export default function CustomersScreen() {
                     key={customer.id}
                     style={[
                       styles.tableRow,
-                      idx !== filteredCustomers.length - 1 && styles.borderBottom,
+                      idx !== filteredCustomers.length - 1 && [styles.borderBottom, { borderColor: colors.borderColorLight }],
                       { backgroundColor: getRowBackgroundColor(customer) },
                     ]}
                   >
                     <View style={[styles.tdCustomer, { flex: 2.5 }]}>
                       <View style={styles.customerMeta}>
-                        <Text style={styles.customerName}>{customer.name}</Text>
-                        <Text style={styles.customerId}>{customer.id}</Text>
+                        <Text style={[styles.customerName, { color: colors.titleText }]}>{customer.name}</Text>
+                        <Text style={[styles.customerId, { color: colors.subtleText }]}>{customer.id}</Text>
                       </View>
                     </View>
-                    <Text style={[styles.td, { flex: 1.5 }]}>{customer.nic}</Text>
-                    <Text style={[styles.td, { flex: 2 }]}>{customer.phone}</Text>
-                    <Text style={[styles.td, { flex: 1.5 }]}>{customer.address}</Text>
+                    <Text style={[styles.td, { flex: 1.5, color: colors.inputText }]}>{customer.nic}</Text>
+                    <Text style={[styles.td, { flex: 2, color: colors.inputText }]}>{customer.phone}</Text>
+                    <Text style={[styles.td, { flex: 1.5, color: colors.inputText }]}>{customer.address}</Text>
                     <View style={[styles.tdBadgeCol, { flex: 1 }]}>
                       <View
                         style={[
@@ -509,63 +543,63 @@ export default function CustomersScreen() {
         visible={addModalVisible}
         onRequestClose={() => setAddModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContentCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Customer</Text>
+        <View style={[styles.modalOverlay, { backgroundColor: isDark ? "rgba(0, 0, 0, 0.6)" : "rgba(25, 42, 74, 0.45)" }]}>
+          <View style={[styles.modalContentCard, { backgroundColor: colors.cardBg }]}>
+            <View style={[styles.modalHeader, { borderColor: colors.borderColor }]}>
+              <Text style={[styles.modalTitle, { color: colors.titleText }]}>Add Customer</Text>
               <Pressable onPress={() => setAddModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#192a4a" />
+                <Ionicons name="close" size={24} color={colors.titleText} />
               </Pressable>
             </View>
 
             <ScrollView style={styles.modalFormBody}>
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Full Name</Text>
+                <Text style={[styles.inputLabel, { color: colors.subtleText }]}>Full Name</Text>
                 <TextInput
                   placeholder="e.g. Asanka Bandara"
                   value={formName}
                   onChangeText={setFormName}
-                  style={styles.formInput}
-                  placeholderTextColor="#7a859d"
+                  style={[styles.formInput, { backgroundColor: colors.inputBg, color: colors.inputText, borderColor: colors.borderColor }]}
+                  placeholderTextColor={colors.inputPlaceholder}
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>NIC Number</Text>
+                <Text style={[styles.inputLabel, { color: colors.subtleText }]}>NIC Number</Text>
                 <TextInput
                   placeholder="e.g. 892341234V or 12 digits"
                   value={formNic}
                   onChangeText={setFormNic}
-                  style={styles.formInput}
-                  placeholderTextColor="#7a859d"
+                  style={[styles.formInput, { backgroundColor: colors.inputBg, color: colors.inputText, borderColor: colors.borderColor }]}
+                  placeholderTextColor={colors.inputPlaceholder}
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Phone Number</Text>
+                <Text style={[styles.inputLabel, { color: colors.subtleText }]}>Phone Number</Text>
                 <TextInput
                   placeholder="e.g. +94 71 234 5678"
                   value={formPhone}
                   onChangeText={setFormPhone}
                   keyboardType="phone-pad"
-                  style={styles.formInput}
-                  placeholderTextColor="#7a859d"
+                  style={[styles.formInput, { backgroundColor: colors.inputBg, color: colors.inputText, borderColor: colors.borderColor }]}
+                  placeholderTextColor={colors.inputPlaceholder}
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Address</Text>
+                <Text style={[styles.inputLabel, { color: colors.subtleText }]}>Address</Text>
                 <TextInput
                   placeholder="e.g. Colombo 5"
                   value={formAddress}
                   onChangeText={setFormAddress}
-                  style={styles.formInput}
-                  placeholderTextColor="#7a859d"
+                  style={[styles.formInput, { backgroundColor: colors.inputBg, color: colors.inputText, borderColor: colors.borderColor }]}
+                  placeholderTextColor={colors.inputPlaceholder}
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Risk Level</Text>
+                <Text style={[styles.inputLabel, { color: colors.subtleText }]}>Risk Level</Text>
                 <View style={styles.selectionRow}>
                   {(["Low", "Medium", "High"] as const).map((r) => (
                     <Pressable
@@ -573,12 +607,14 @@ export default function CustomersScreen() {
                       onPress={() => setFormRisk(r)}
                       style={[
                         styles.selectionCell,
-                        formRisk === r && styles.selectionCellActive,
+                        { backgroundColor: colors.inputBg },
+                        formRisk === r && [styles.selectionCellActive, { backgroundColor: colors.filterOptionActiveBg, borderColor: colors.filterOptionActiveBorder }],
                       ]}
                     >
                       <Text
                         style={[
                           styles.selectionCellText,
+                          { color: colors.bodyText },
                           formRisk === r && styles.selectionCellTextActive,
                         ]}
                       >
@@ -590,7 +626,7 @@ export default function CustomersScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Account Status</Text>
+                <Text style={[styles.inputLabel, { color: colors.subtleText }]}>Account Status</Text>
                 <View style={styles.selectionRow}>
                   {(["Active", "Overdue"] as const).map((s) => (
                     <Pressable
@@ -598,12 +634,14 @@ export default function CustomersScreen() {
                       onPress={() => setFormStatus(s)}
                       style={[
                         styles.selectionCell,
-                        formStatus === s && styles.selectionCellActive,
+                        { backgroundColor: colors.inputBg },
+                        formStatus === s && [styles.selectionCellActive, { backgroundColor: colors.filterOptionActiveBg, borderColor: colors.filterOptionActiveBorder }],
                       ]}
                     >
                       <Text
                         style={[
                           styles.selectionCellText,
+                          { color: colors.bodyText },
                           formStatus === s && styles.selectionCellTextActive,
                         ]}
                       >
@@ -636,22 +674,22 @@ export default function CustomersScreen() {
         visible={detailModalVisible}
         onRequestClose={() => setDetailModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContentCard, styles.detailsModalCard]}>
+        <View style={[styles.modalOverlay, { backgroundColor: isDark ? "rgba(0, 0, 0, 0.6)" : "rgba(25, 42, 74, 0.45)" }]}>
+          <View style={[styles.modalContentCard, styles.detailsModalCard, { backgroundColor: colors.cardBg }]}>
             {selectedCustomer && (
               <>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Customer Profile</Text>
+                <View style={[styles.modalHeader, { borderColor: colors.borderColor }]}>
+                  <Text style={[styles.modalTitle, { color: colors.titleText }]}>Customer Profile</Text>
                   <Pressable onPress={() => setDetailModalVisible(false)}>
-                    <Ionicons name="close" size={24} color="#192a4a" />
+                    <Ionicons name="close" size={24} color={colors.titleText} />
                   </Pressable>
                 </View>
 
                 <ScrollView style={styles.modalFormBody}>
                   {/* Key Profile Details */}
-                  <View style={styles.detailProfileHeader}>
-                    <Text style={styles.detailName}>{selectedCustomer.name}</Text>
-                    <Text style={styles.detailId}>{selectedCustomer.id}</Text>
+                  <View style={[styles.detailProfileHeader, { borderColor: colors.borderColor }]}>
+                    <Text style={[styles.detailName, { color: colors.titleText }]}>{selectedCustomer.name}</Text>
+                    <Text style={[styles.detailId, { color: colors.subtleText }]}>{selectedCustomer.id}</Text>
 
                     <View style={[styles.badgeRow, { marginTop: 12 }]}>
                       <View
@@ -700,23 +738,23 @@ export default function CustomersScreen() {
                   </View>
 
                   {/* General Contact Info Card */}
-                  <View style={styles.detailsInfoSection}>
+                  <View style={[styles.detailsInfoSection, { backgroundColor: colors.inputBg, borderColor: colors.borderColor }]}>
                     <Text style={styles.sectionHeaderTitle}>Identity & Details</Text>
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>National Identity Card (NIC)</Text>
-                      <Text style={styles.detailValue}>{selectedCustomer.nic}</Text>
+                      <Text style={[styles.detailLabel, { color: colors.subtleText }]}>National Identity Card (NIC)</Text>
+                      <Text style={[styles.detailValue, { color: colors.titleText }]}>{selectedCustomer.nic}</Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Mobile Phone</Text>
-                      <Text style={styles.detailValue}>{selectedCustomer.phone}</Text>
+                      <Text style={[styles.detailLabel, { color: colors.subtleText }]}>Mobile Phone</Text>
+                      <Text style={[styles.detailValue, { color: colors.titleText }]}>{selectedCustomer.phone}</Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Resident Address</Text>
-                      <Text style={styles.detailValue}>{selectedCustomer.address}</Text>
+                      <Text style={[styles.detailLabel, { color: colors.subtleText }]}>Resident Address</Text>
+                      <Text style={[styles.detailValue, { color: colors.titleText }]}>{selectedCustomer.address}</Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Assigned Branch</Text>
-                      <Text style={styles.detailValue}>
+                      <Text style={[styles.detailLabel, { color: colors.subtleText }]}>Assigned Branch</Text>
+                      <Text style={[styles.detailValue, { color: colors.titleText }]}>
                         {selectedCustomer.address.toLowerCase().includes("kandy") ? "Kandy Branch" : "Colombo Central"}
                       </Text>
                     </View>
@@ -725,11 +763,12 @@ export default function CustomersScreen() {
                   <Pressable
                     style={({ pressed }) => [
                       styles.closeDetailsBtn,
+                      { borderColor: colors.closeBtnBorder },
                       pressed && styles.buttonPressed,
                     ]}
                     onPress={() => setDetailModalVisible(false)}
                   >
-                    <Text style={styles.closeDetailsBtnText}>Close Profile</Text>
+                    <Text style={[styles.closeDetailsBtnText, { color: colors.closeBtnText }]}>Close Profile</Text>
                   </Pressable>
                 </ScrollView>
               </>

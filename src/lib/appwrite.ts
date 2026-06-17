@@ -1,9 +1,13 @@
-import { Client, Account, ID, Databases } from 'appwrite';
+import { Client, Account, ID, Databases, Query } from 'appwrite';
 import { 
   APPWRITE_ENDPOINT, 
   APPWRITE_PROJECT, 
   APPWRITE_DATABASE_ID, 
-  APPWRITE_CUSTOMERS_COLLECTION_ID 
+  APPWRITE_CUSTOMERS_COLLECTION_ID,
+  APPWRITE_LOANS_COLLECTION_ID,
+  APPWRITE_SETTING_COLLECTION_ID,
+  APPWRITE_COLLECTERS_COLLECTION_ID,
+  APPWRITE_BRANCHES_COLLECTION_ID
 } from '@/constants/appwrite';
 
 const AUTH_KEY = 'APPWRITE_AUTH_CREDENTIALS';
@@ -53,6 +57,69 @@ export async function addCustomer(customerData: {
   }
 }
 
+export async function getLoans() {
+  try {
+    const response = await databases.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_LOANS_COLLECTION_ID
+    );
+    return response.documents;
+  } catch (error) {
+    console.log('getLoans error (using mock fallback):', error);
+    throw error;
+  }
+}
+
+export async function addLoan(loanData: {
+  loanId: string;
+  customerId: string;
+  customerName: string;
+  branch: string;
+  loanType: string;
+  collector: string;
+  amount: number;
+  interestRate: number;
+  duration: number;
+  disbursementDate: string;
+  loanPurpose: string;
+  outstanding: number;
+  paidAmount: number;
+  status: string;
+  risk: string;
+}) {
+  try {
+    const { loanId, ...dataWithoutLoanId } = loanData;
+    const response = await databases.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_LOANS_COLLECTION_ID,
+      loanId,
+      dataWithoutLoanId
+    );
+    return response;
+  } catch (error) {
+    console.log('addLoan error:', error);
+    throw error;
+  }
+}
+
+export async function updateLoan(documentId: string, updatedFields: Partial<{
+  outstanding: number;
+  paidAmount: number;
+  status: string;
+}>) {
+  try {
+    const response = await databases.updateDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_LOANS_COLLECTION_ID,
+      documentId,
+      updatedFields
+    );
+    return response;
+  } catch (error) {
+    console.log('updateLoan error:', error);
+    throw error;
+  }
+}
 
 // Simple in-memory storage fallback for Expo Go
 let authStore: { email: string; password: string } | null = null;
@@ -96,5 +163,160 @@ export async function autoLoginWithSavedCredentials() {
     console.error('autoLoginWithSavedCredentials error:', error);
     await clearAuthCredentials();
     return false;
+  }
+}
+
+// Settings Database APIs
+export async function getSettings() {
+  try {
+    const response = await databases.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_SETTING_COLLECTION_ID
+    );
+    if (response.documents.length > 0) {
+      return response.documents[0];
+    }
+    
+    // Create default settings if empty
+    const defaults = {
+      Branches: JSON.stringify(["Colombo Central", "Negombo Branch", "Galle Branch", "Kandy Branch"]),
+      Collectors: JSON.stringify(["Mahesh Kularatne", "Suresh Perera", "Anura Silva", "Nimal Jayasinghe"])
+    };
+    
+    const newDoc = await databases.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_SETTING_COLLECTION_ID,
+      'global_settings',
+      defaults
+    );
+    return newDoc;
+  } catch (error) {
+    console.log('getSettings error:', error);
+    throw error;
+  }
+}
+
+export async function updateSettings(branches: string[], collectors: string[]) {
+  try {
+    const data = {
+      Branches: JSON.stringify(branches),
+      Collectors: JSON.stringify(collectors)
+    };
+    
+    try {
+      const response = await databases.updateDocument(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_SETTING_COLLECTION_ID,
+        'global_settings',
+        data
+      );
+      return response;
+    } catch (err: any) {
+      if (err.code === 404) {
+        const response = await databases.createDocument(
+          APPWRITE_DATABASE_ID,
+          APPWRITE_SETTING_COLLECTION_ID,
+          'global_settings',
+          data
+        );
+        return response;
+      }
+      throw err;
+    }
+  } catch (error) {
+    console.log('updateSettings error:', error);
+    throw error;
+  }
+}
+
+export async function getCollectors() {
+  try {
+    const response = await databases.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_COLLECTERS_COLLECTION_ID
+    );
+    return response.documents;
+  } catch (error) {
+    console.log('getCollectors error:', error);
+    throw error;
+  }
+}
+
+export async function addCollector(name: string, phone: string | number, NIC?: string) {
+  try {
+    const data: any = {
+      name,
+      phone
+    };
+    if (NIC) {
+      data.NIC = NIC;
+    }
+    const response = await databases.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_COLLECTERS_COLLECTION_ID,
+      ID.unique(),
+      data
+    );
+    return response;
+  } catch (error) {
+    console.log('addCollector error:', error);
+    throw error;
+  }
+}
+
+export async function deleteCollectorById(documentId: string) {
+  try {
+    const response = await databases.deleteDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_COLLECTERS_COLLECTION_ID,
+      documentId
+    );
+    return response;
+  } catch (error) {
+    console.log('deleteCollectorById error:', error);
+    throw error;
+  }
+}
+
+// Branches Database APIs
+export async function getBranches() {
+  try {
+    const response = await databases.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BRANCHES_COLLECTION_ID
+    );
+    return response.documents;
+  } catch (error) {
+    console.log('getBranches error:', error);
+    throw error;
+  }
+}
+
+export async function addBranch(name: string) {
+  try {
+    const response = await databases.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BRANCHES_COLLECTION_ID,
+      ID.unique(),
+      { name }
+    );
+    return response;
+  } catch (error) {
+    console.log('addBranch error:', error);
+    throw error;
+  }
+}
+
+export async function deleteBranchById(documentId: string) {
+  try {
+    const response = await databases.deleteDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_BRANCHES_COLLECTION_ID,
+      documentId
+    );
+    return response;
+  } catch (error) {
+    console.log('deleteBranchById error:', error);
+    throw error;
   }
 }

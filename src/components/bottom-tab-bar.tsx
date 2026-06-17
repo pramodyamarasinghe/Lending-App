@@ -8,7 +8,8 @@ export type BottomTabKey =
   | "customers"
   | "loans"
   | "collections"
-  | "profit";
+  | "profit"
+  | "settings";
 
 interface TabConfig {
   key: BottomTabKey;
@@ -53,6 +54,13 @@ const tabs: TabConfig[] = [
     route: "/profit",
     iconActive: "analytics",
     iconInactive: "analytics-outline",
+  },
+  {
+    key: "settings",
+    label: "Settings",
+    route: "/settings",
+    iconActive: "settings",
+    iconInactive: "settings-outline",
   },
 ];
 

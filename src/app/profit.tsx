@@ -5,6 +5,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    useColorScheme,
     useWindowDimensions,
     View,
 } from "react-native";
@@ -20,8 +21,18 @@ export default function ProfitScreen() {
   const pageHorizontalPadding = width > 760 ? 32 : 24;
   const maxContentWidth = width > 840 ? 760 : "100%";
 
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  const colors = {
+    bg: isDark ? "#0f172a" : "#ecf2ff",
+    cardBg: isDark ? "#1e293b" : "#ffffff",
+    titleText: isDark ? "#ffffff" : "#192a4a",
+    bodyText: isDark ? "#94a3b8" : "#6b7a99",
+  };
+
   return (
-    <View style={[styles.page, { paddingTop: safeTop + 24 }]}>
+    <View style={[styles.page, { paddingTop: safeTop + 24, backgroundColor: colors.bg }]}>
       <ScrollView
         contentContainerStyle={[
           styles.container,
@@ -33,11 +44,11 @@ export default function ProfitScreen() {
           },
         ]}
       >
-        <Text style={styles.title}>Profit</Text>
+        <Text style={[styles.title, { color: colors.titleText }]}>Profit</Text>
 
-        <View style={[styles.card, { width: "100%" }]}>
-          <Text style={styles.cardTitle}>Profit analytics</Text>
-          <Text style={styles.cardText}>
+        <View style={[styles.card, { width: "100%", backgroundColor: colors.cardBg }]}>
+          <Text style={[styles.cardTitle, { color: colors.titleText }]}>Profit analytics</Text>
+          <Text style={[styles.cardText, { color: colors.bodyText }]}>
             See how lending, collections, and fees are driving your bottom line.
           </Text>
           <Pressable style={styles.button} onPress={() => router.push("/")}>
