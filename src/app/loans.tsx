@@ -1,8 +1,8 @@
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { getCustomers, getLoans, addLoan, updateLoan, getSettings, getCollectors, getBranches } from "@/lib/appwrite";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter, useFocusEffect } from "expo-router";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Alert,
@@ -262,10 +262,12 @@ export default function LoansScreen() {
   const [collectedAmountStr, setCollectedAmountStr] = useState("");
   const [recordingCollection, setRecordingCollection] = useState(false);
 
-  // Fetch Data on mount
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Fetch Data on focus
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   const loadData = async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) {
@@ -698,6 +700,29 @@ export default function LoansScreen() {
     }
   };
 
+  const getLoanEndDate = (loan: any) => {
+    if (!loan || !loan.disbursementDate) return "—";
+    const parts = loan.disbursementDate.split("/");
+    if (parts.length !== 3) return "—";
+    
+    const m = parseInt(parts[0], 10) - 1;
+    const d = parseInt(parts[1], 10);
+    const y = parseInt(parts[2], 10);
+    const baseDate = new Date(y, m, d);
+    if (isNaN(baseDate.getTime())) return "—";
+
+    const endDateObj = new Date(baseDate);
+    if (loan.loanType === "Daily") {
+      endDateObj.setDate(baseDate.getDate() + loan.duration);
+    } else if (loan.loanType === "Weekly") {
+      endDateObj.setDate(baseDate.getDate() + loan.duration * 7);
+    } else {
+      endDateObj.setMonth(baseDate.getMonth() + loan.duration);
+    }
+    
+    return `${endDateObj.getMonth() + 1}/${endDateObj.getDate()}/${endDateObj.getFullYear()}`;
+  };
+
   return (
     <View style={[styles.page, { backgroundColor: colors.bg }]}>
       <ScrollView
@@ -812,6 +837,10 @@ export default function LoansScreen() {
                               <Text style={[styles.compactValue, { color: colors.titleText }]}>Rs. {loan.outstanding.toLocaleString()}</Text>
                             </View>
                             <View style={styles.compactCardInfoRow}>
+                              <Text style={[styles.compactLabel, { color: colors.bodyText }]}>Collector:</Text>
+                              <Text style={[styles.compactValue, { color: colors.titleText, fontWeight: "600" }]}>{loan.collector}</Text>
+                            </View>
+                            <View style={styles.compactCardInfoRow}>
                               <Text style={[styles.compactLabel, { color: colors.bodyText }]}>Type:</Text>
                               <View style={[styles.typeBadge, { backgroundColor: loan.loanType === "Daily" ? "#e8efff" : loan.loanType === "Weekly" ? "#e6f9ff" : "#f5e8ff" }]}>
                                 <Text style={[styles.typeBadgeText, { color: loan.loanType === "Daily" ? "#3366ff" : loan.loanType === "Weekly" ? "#00bcd4" : "#9c27b0" }]}>
@@ -847,7 +876,8 @@ export default function LoansScreen() {
                   <View style={[styles.tableHeaderRow, { borderColor: colors.dividerColor }]}>
                     <Text style={[styles.th, { flex: 1.2, color: colors.subtleText }]}>Loan #</Text>
                     <Text style={[styles.th, { flex: 2, color: colors.subtleText }]}>Customer</Text>
-                    <Text style={[styles.th, { flex: 2, color: colors.subtleText }]}>Branch</Text>
+                    <Text style={[styles.th, { flex: 1.5, color: colors.subtleText }]}>Branch</Text>
+                    <Text style={[styles.th, { flex: 1.5, color: colors.subtleText }]}>Collector</Text>
                     <Text style={[styles.th, { flex: 1, color: colors.subtleText }]}>Type</Text>
                     <Text style={[styles.th, { flex: 1.5, color: colors.subtleText }]}>Principal</Text>
                     <Text style={[styles.th, { flex: 1.5, color: colors.subtleText }]}>Installment</Text>
@@ -880,7 +910,8 @@ export default function LoansScreen() {
                         >
                           <Text style={[styles.td, styles.loanIdTd, { flex: 1.2, color: colors.inputText }]}>{loan.id}</Text>
                           <Text style={[styles.td, styles.customerTd, { flex: 2, color: colors.inputText }]}>{loan.customerName}</Text>
-                          <Text style={[styles.td, { flex: 2, color: colors.bodyText }]}>{loan.branch}</Text>
+                          <Text style={[styles.td, { flex: 1.5, color: colors.bodyText }]}>{loan.branch}</Text>
+                          <Text style={[styles.td, { flex: 1.5, color: colors.bodyText, fontWeight: "600" }]}>{loan.collector}</Text>
                           
                           <View style={[styles.tableCell, { flex: 1 }]}>
                             <View style={[styles.typeBadge, { backgroundColor: loan.loanType === "Daily" ? "#e8efff" : loan.loanType === "Weekly" ? "#e6f9ff" : "#f5e8ff" }]}>
@@ -1271,7 +1302,7 @@ export default function LoansScreen() {
           onRequestClose={() => setDetailsModalVisible(false)}
         >
           <View style={[styles.modalOverlay, { backgroundColor: colors.repaymentOverlayBg }]}>
-            <View style={[styles.modalContent, { backgroundColor: colors.cardBg }]}>
+            <View style={[styles.modalContent, { backgroundColor: colors.cardBg, maxHeight: "85%" }]}>
               <View style={[styles.modalHeader, { borderColor: colors.dividerColor }]}>
                 <Text style={[styles.modalTitle, { color: colors.titleText }]}>Loan Details ({selectedLoan.id})</Text>
                 <Pressable onPress={() => setDetailsModalVisible(false)}>
@@ -1279,7 +1310,7 @@ export default function LoansScreen() {
                 </Pressable>
               </View>
 
-              <View style={styles.modalBody}>
+              <ScrollView contentContainerStyle={styles.modalBody} showsVerticalScrollIndicator={true}>
                 <View style={styles.detailRow}>
                   <Text style={[styles.detailLabel, { color: colors.bodyText }]}>Customer:</Text>
                   <Text style={[styles.detailValue, { color: colors.titleText }]}>{selectedLoan.customerName}</Text>
@@ -1287,6 +1318,10 @@ export default function LoansScreen() {
                 <View style={styles.detailRow}>
                   <Text style={[styles.detailLabel, { color: colors.bodyText }]}>Branch:</Text>
                   <Text style={[styles.detailValue, { color: colors.titleText }]}>{selectedLoan.branch}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={[styles.detailLabel, { color: colors.bodyText }]}>Collector:</Text>
+                  <Text style={[styles.detailValue, { color: colors.titleText, fontWeight: "700" }]}>{selectedLoan.collector}</Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={[styles.detailLabel, { color: colors.bodyText }]}>Type:</Text>
@@ -1315,6 +1350,12 @@ export default function LoansScreen() {
                 <View style={styles.detailRow}>
                   <Text style={[styles.detailLabel, { color: colors.bodyText }]}>Disbursement date:</Text>
                   <Text style={[styles.detailValue, { color: colors.titleText }]}>{selectedLoan.disbursementDate}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={[styles.detailLabel, { color: colors.bodyText }]}>Loan ended date:</Text>
+                  <Text style={[styles.detailValue, { color: colors.titleText, fontWeight: "600" }]}>
+                    {getLoanEndDate(selectedLoan)}
+                  </Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={[styles.detailLabel, { color: colors.bodyText }]}>Status:</Text>
@@ -1357,7 +1398,7 @@ export default function LoansScreen() {
                     </Pressable>
                   </View>
                 )}
-              </View>
+              </ScrollView>
             </View>
           </View>
         </Modal>

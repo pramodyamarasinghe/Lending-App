@@ -7,7 +7,8 @@ import {
   APPWRITE_LOANS_COLLECTION_ID,
   APPWRITE_SETTING_COLLECTION_ID,
   APPWRITE_COLLECTERS_COLLECTION_ID,
-  APPWRITE_BRANCHES_COLLECTION_ID
+  APPWRITE_BRANCHES_COLLECTION_ID,
+  APPWRITE_COLLECTIONS_COLLECTION_ID
 } from '@/constants/appwrite';
 
 const AUTH_KEY = 'APPWRITE_AUTH_CREDENTIALS';
@@ -25,7 +26,8 @@ export async function getCustomers() {
   try {
     const response = await databases.listDocuments(
       APPWRITE_DATABASE_ID,
-      APPWRITE_CUSTOMERS_COLLECTION_ID
+      APPWRITE_CUSTOMERS_COLLECTION_ID,
+      [Query.limit(1000)]
     );
     return response.documents;
   } catch (error) {
@@ -61,7 +63,8 @@ export async function getLoans() {
   try {
     const response = await databases.listDocuments(
       APPWRITE_DATABASE_ID,
-      APPWRITE_LOANS_COLLECTION_ID
+      APPWRITE_LOANS_COLLECTION_ID,
+      [Query.limit(1000)]
     );
     return response.documents;
   } catch (error) {
@@ -317,6 +320,91 @@ export async function deleteBranchById(documentId: string) {
     return response;
   } catch (error) {
     console.log('deleteBranchById error:', error);
+    throw error;
+  }
+}
+
+// Collections Database APIs
+export interface CollectionRecord {
+  receiptId: string;
+  time: string;
+  customerName: string;
+  loanId: string;
+  collectorName: string;
+  amount: number | null;
+  status: "Collected" | "Promise to Pay";
+  date: string;
+}
+
+export async function getCollectionRecords() {
+  try {
+    const response = await databases.listDocuments(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_COLLECTIONS_COLLECTION_ID,
+      [
+        Query.orderDesc('$createdAt'),
+        Query.limit(1000)
+      ]
+    );
+    
+    const dummyNames = [
+      "Priyantha Bandara", 
+      "Samantha Fernando", 
+      "Sunil Shantha", 
+      "Nirmala Kumari", 
+      "Chandra Silva", 
+      "Kamal Hashim", 
+      "Aruni Ranasinghe", 
+      "Fathima Riza"
+    ];
+    
+    const docs = response.documents;
+    const cleanDocs = [];
+    
+    for (const doc of docs) {
+      if (dummyNames.includes(doc.customerName)) {
+        console.log(`Auto-deleting dummy record: ${doc.$id} (${doc.customerName})`);
+        try {
+          await databases.deleteDocument(
+            APPWRITE_DATABASE_ID,
+            APPWRITE_COLLECTIONS_COLLECTION_ID,
+            doc.$id
+          );
+        } catch (delErr) {
+          console.error(`Failed to auto-delete document ${doc.$id}:`, delErr);
+        }
+      } else {
+        cleanDocs.push(doc);
+      }
+    }
+    
+    return cleanDocs;
+  } catch (error) {
+    console.error('getCollectionRecords error:', error);
+    throw error;
+  }
+}
+
+export async function addCollectionRecord(record: {
+  receiptId: string;
+  time: string;
+  customerName: string;
+  loanId: string;
+  collectorName: string;
+  amount: number | null;
+  status: "Collected" | "Promise to Pay";
+  date: string;
+}) {
+  try {
+    const response = await databases.createDocument(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_COLLECTIONS_COLLECTION_ID,
+      ID.unique(),
+      record
+    );
+    return response;
+  } catch (error) {
+    console.error('addCollectionRecord error:', error);
     throw error;
   }
 }

@@ -7,4 +7,5 @@ export const APPWRITE_LOANS_COLLECTION_ID = 'loans';
 export const APPWRITE_SETTING_COLLECTION_ID = 'setting';
 export const APPWRITE_COLLECTERS_COLLECTION_ID = 'collecters';
 export const APPWRITE_BRANCHES_COLLECTION_ID = 'branches';
+export const APPWRITE_COLLECTIONS_COLLECTION_ID = 'collections';
 

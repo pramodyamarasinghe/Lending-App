@@ -1,6 +1,7 @@
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -23,7 +24,9 @@ import {
   deleteCollectorById,
   getBranches,
   addBranch,
-  deleteBranchById
+  deleteBranchById,
+  account,
+  clearAuthCredentials
 } from "@/lib/appwrite";
 
 
@@ -41,6 +44,7 @@ interface Collector {
 }
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const insets = useSafeAreaInsets();
@@ -63,6 +67,22 @@ export default function SettingsScreen() {
   const [collectorInput, setCollectorInput] = useState("");
   const [collectorPhoneInput, setCollectorPhoneInput] = useState("");
   const [collectorNicInput, setCollectorNicInput] = useState("");
+
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await account.deleteSession("current");
+      await clearAuthCredentials();
+      Alert.alert("Success", "Logged out");
+      router.replace("/login");
+    } catch (err: any) {
+      Alert.alert("Error", err?.message || "Logout failed");
+    } finally {
+      setLoggingOut(false);
+    }
+  };
 
   // Load settings on mount
   useEffect(() => {
@@ -374,6 +394,8 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+
+
         {/* Layout for managers (two column if wide screen) */}
         <View style={[styles.managerGrid, { flexDirection: isCompact ? "column" : "row" }]}>
           
@@ -530,6 +552,28 @@ export default function SettingsScreen() {
           </View>
 
         </View>
+
+        {/* Logout Setting Card */}
+        <View style={[styles.settingsCard, { backgroundColor: colors.cardBg }]}>
+          <Text style={[styles.panelTitle, { color: colors.titleText }]}>Account Session</Text>
+          <Text style={[styles.panelSubtitle, { color: colors.bodyText, marginBottom: 16 }]}>
+            Sign out of your account on this device.
+          </Text>
+          <Pressable
+            disabled={loggingOut}
+            style={({ pressed }) => [
+              styles.logoutButton,
+              pressed && styles.pressed,
+              loggingOut && { opacity: 0.6 }
+            ]}
+            onPress={handleLogout}
+          >
+            <Ionicons name="log-out-outline" size={18} color="#ffffff" style={{ marginRight: 8 }} />
+            <Text style={styles.logoutButtonText}>
+              {loggingOut ? "Signing out..." : "Logout"}
+            </Text>
+          </Pressable>
+        </View>
       </ScrollView>
       <BottomTabBar activeTab="settings" />
     </View>
@@ -680,5 +724,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginVertical: 16,
     fontStyle: "italic"
+  },
+  logoutButton: {
+    backgroundColor: "#ff4d4f",
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    shadowColor: "#ff4d4f",
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  logoutButtonText: {
+    color: "#ffffff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  pressed: {
+    opacity: 0.8,
   }
 });

@@ -1,10 +1,13 @@
 import { BottomTabBar, type BottomTabKey } from "@/components/bottom-tab-bar";
-import { account, clearAuthCredentials } from "@/lib/appwrite";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { getLoans, getCustomers, getCollectionRecords } from "@/lib/appwrite";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter, useFocusEffect } from "expo-router";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Alert,
+  ActivityIndicator,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,60 +17,18 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const metrics = [
-  {
-    title: "Portfolio Value",
-    value: "Rs. 54,420,000",
-    subtitle: "+12.4% MoM",
-    accent: "#3d5afe",
-  },
-  {
-    title: "Active Loans",
-    value: "1,414",
-    subtitle: "62 overdue",
-    accent: "#ffb300",
-  },
-  {
-    title: "Collections Today",
-    value: "Rs. 186,500",
-    subtitle: "vs Rs. 160k target",
-    accent: "#2ecc71",
-  },
-  {
-    title: "Cash Position",
-    value: "Rs. 2,840,000",
-    subtitle: "Across 5 branches",
-    accent: "#208ae5",
-  },
-  {
-    title: "Outstanding",
-    value: "Rs. 8,120,000",
-    subtitle: "3.2% of portfolio",
-    accent: "#8e44ad",
-  },
-  {
-    title: "Active Customers",
-    value: "2,184",
-    subtitle: "48 onboarded this week",
-    accent: "#2196f3",
-  },
-];
-
-const collectionsTrendData = [
-  { day: "Mon", collected: 24500, target: 30000, date: "Monday, Jun 10" },
-  { day: "Tue", collected: 32000, target: 30000, date: "Tuesday, Jun 11" },
-  { day: "Wed", collected: 29800, target: 30000, date: "Wednesday, Jun 12" },
-  { day: "Thu", collected: 38500, target: 30000, date: "Thursday, Jun 13" },
-  { day: "Fri", collected: 15400, target: 30000, date: "Friday, Jun 14" },
-  { day: "Sat", collected: 42000, target: 35000, date: "Saturday, Jun 15" },
-  { day: "Sun", collected: 48600, target: 35000, date: "Sunday, Jun 16" },
-];
-
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const [loading, setLoading] = useState(false);
+  
+  // Database State
+  const [loans, setLoans] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [collections, setCollections] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  
   const [activeTab, setActiveTab] = useState<BottomTabKey>("overview");
   const [selectedDayIndex, setSelectedDayIndex] = useState(6);
 
@@ -92,25 +53,298 @@ export default function HomeScreen() {
   const safeTop = insets?.top ?? 0;
   const contentPaddingBottom = safeBottom + 110;
 
-  async function handleLogout() {
-    setLoading(true);
+  // Fetch all dashboard stats from database on focus
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboardData();
+    }, [])
+  );
+
+  const loadDashboardData = async (showRefreshIndicator = false) => {
+    if (showRefreshIndicator) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     try {
-      await account.deleteSession("current");
-      await clearAuthCredentials();
-      Alert.alert("Success", "Logged out");
-      setActiveTab("overview");
-      router.replace("/login");
+      const [loanDocs, customerDocs, collectionDocs] = await Promise.all([
+        getLoans().catch(err => {
+          console.log("Failed to load loans from Appwrite, using fallback:", err);
+          return null;
+        }),
+        getCustomers().catch(err => {
+          console.log("Failed to load customers from Appwrite, using fallback:", err);
+          return null;
+        }),
+        getCollectionRecords().catch(err => {
+          console.log("Failed to load collection records from Appwrite, using fallback:", err);
+          return null;
+        }),
+      ]);
+
+      let finalLoans = loanDocs;
+      let finalCustomers = customerDocs;
+      let finalCollections = collectionDocs;
+
+      // Caching if remote succeeded
+      if (loanDocs && loanDocs.length > 0) {
+        try {
+          await AsyncStorage.setItem("LENDING_APP_LOANS", JSON.stringify(loanDocs));
+        } catch (storageErr) {
+          console.log("Failed to cache loans:", storageErr);
+        }
+      } else {
+        try {
+          const stored = await AsyncStorage.getItem("LENDING_APP_LOANS");
+          if (stored) finalLoans = JSON.parse(stored);
+        } catch (storageErr) {
+          console.log("Failed to load loans from storage:", storageErr);
+        }
+      }
+
+      if (customerDocs && customerDocs.length > 0) {
+        try {
+          await AsyncStorage.setItem("LENDING_APP_CUSTOMERS", JSON.stringify(customerDocs));
+        } catch (storageErr) {
+          console.log("Failed to cache customers:", storageErr);
+        }
+      } else {
+        try {
+          const stored = await AsyncStorage.getItem("LENDING_APP_CUSTOMERS");
+          if (stored) finalCustomers = JSON.parse(stored);
+        } catch (storageErr) {
+          console.log("Failed to load customers from storage:", storageErr);
+        }
+      }
+
+      if (collectionDocs && collectionDocs.length > 0) {
+        try {
+          await AsyncStorage.setItem("LENDING_APP_COLLECTIONS", JSON.stringify(collectionDocs));
+        } catch (storageErr) {
+          console.log("Failed to cache collections:", storageErr);
+        }
+      } else {
+        try {
+          const stored = await AsyncStorage.getItem("LENDING_APP_COLLECTIONS");
+          if (stored) finalCollections = JSON.parse(stored);
+        } catch (storageErr) {
+          console.log("Failed to load collections from storage:", storageErr);
+        }
+      }
+
+      setLoans(finalLoans || []);
+      setCustomers(finalCustomers || []);
+      setCollections(finalCollections || []);
     } catch (err: any) {
-      Alert.alert("Error", err?.message || "Logout failed");
+      console.log("loadDashboardData error:", err);
+      // Fallback load everything from storage
+      try {
+        const [storedLoans, storedCusts, storedColls] = await Promise.all([
+          AsyncStorage.getItem("LENDING_APP_LOANS"),
+          AsyncStorage.getItem("LENDING_APP_CUSTOMERS"),
+          AsyncStorage.getItem("LENDING_APP_COLLECTIONS")
+        ]);
+        if (storedLoans) setLoans(JSON.parse(storedLoans));
+        if (storedCusts) setCustomers(JSON.parse(storedCusts));
+        if (storedColls) setCollections(JSON.parse(storedColls));
+      } catch (storageErr) {
+        console.log("Storage retrieval fallback failed:", storageErr);
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }
+  };
 
-  const selectedDay = collectionsTrendData[selectedDayIndex];
-  const percentDiff = ((selectedDay.collected - selectedDay.target) / selectedDay.target) * 100;
+
+
+  // Recent Collections Activity
+  const recentCollections = useMemo(() => {
+    return [...collections]
+      .filter(c => c.status === "Collected")
+      .slice(0, 3);
+  }, [collections]);
+
+  // Memoized dynamic metric computations
+  const activeLoansList = useMemo(() => {
+    return loans.filter(l => l.status?.toLowerCase() !== 'closed');
+  }, [loans]);
+
+  const portfolioValue = useMemo(() => {
+    return activeLoansList.reduce((sum, l) => sum + (l.amount || 0), 0);
+  }, [activeLoansList]);
+
+  const activeLoansCount = activeLoansList.length;
+
+  const overdueLoansCount = useMemo(() => {
+    return activeLoansList.filter(l => l.status?.toLowerCase() === 'overdue' || l.status?.toLowerCase().includes('behind')).length;
+  }, [activeLoansList]);
+
+  const todayLabel = useMemo(() => {
+    const now = new Date();
+    const standardMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${standardMonths[now.getMonth()]} ${now.getDate()}`;
+  }, []);
+
+  const collectionsTodayVal = useMemo(() => {
+    return collections
+      .filter(c => c.date === todayLabel && c.status === "Collected")
+      .reduce((sum, c) => sum + (c.amount || 0), 0);
+  }, [collections, todayLabel]);
+
+  const cashPositionVal = useMemo(() => {
+    return collections
+      .filter(c => c.status === "Collected")
+      .reduce((sum, c) => sum + (c.amount || 0), 0);
+  }, [collections]);
+
+  const uniqueBranchesCount = useMemo(() => {
+    const branches = loans.map(l => l.branch).filter(Boolean);
+    return Array.from(new Set(branches)).length;
+  }, [loans]);
+
+  const outstandingVal = useMemo(() => {
+    return activeLoansList.reduce((sum, l) => sum + (l.outstanding || 0), 0);
+  }, [activeLoansList]);
+
+  const outstandingPct = useMemo(() => {
+    if (portfolioValue <= 0) return "0.0";
+    return ((outstandingVal / portfolioValue) * 100).toFixed(1);
+  }, [outstandingVal, portfolioValue]);
+
+  const customersWithActiveLoansCount = useMemo(() => {
+    const custIds = activeLoansList.map(l => l.customerId).filter(Boolean);
+    return Array.from(new Set(custIds)).length;
+  }, [activeLoansList]);
+
+  const computedMetrics = useMemo(() => {
+    return [
+      {
+        title: "Portfolio Value",
+        value: `Rs. ${portfolioValue.toLocaleString()}`,
+        subtitle: `Across ${activeLoansCount} active agreements`,
+        accent: "#3d5afe",
+      },
+      {
+        title: "Active Loans",
+        value: activeLoansCount.toLocaleString(),
+        subtitle: `${overdueLoansCount} overdue`,
+        accent: "#ffb300",
+      },
+      {
+        title: "Collections Today",
+        value: `Rs. ${collectionsTodayVal.toLocaleString()}`,
+        subtitle: "vs Rs. 30k target",
+        accent: "#2ecc71",
+      },
+      {
+        title: "Cash Position",
+        value: `Rs. ${cashPositionVal.toLocaleString()}`,
+        subtitle: `Across ${uniqueBranchesCount || 1} branch${uniqueBranchesCount !== 1 ? 'es' : ''}`,
+        accent: "#208ae5",
+      },
+      {
+        title: "Outstanding",
+        value: `Rs. ${outstandingVal.toLocaleString()}`,
+        subtitle: `${outstandingPct}% of portfolio`,
+        accent: "#8e44ad",
+      },
+      {
+        title: "Active Customers",
+        value: customers.length.toLocaleString(),
+        subtitle: `${customersWithActiveLoansCount} with active loans`,
+        accent: "#2196f3",
+      },
+    ];
+  }, [
+    portfolioValue,
+    activeLoansCount,
+    overdueLoansCount,
+    collectionsTodayVal,
+    cashPositionVal,
+    uniqueBranchesCount,
+    outstandingVal,
+    outstandingPct,
+    customers.length,
+    customersWithActiveLoansCount,
+  ]);
+
+  // Compute 7-day collections trend dynamically based on database entries
+  const collectionsTrendData = useMemo(() => {
+    const data = [];
+    const standardMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const fullDayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    
+    // Find the latest collection date in database or today, whichever is later
+    let endDate = new Date();
+    
+    collections.forEach(c => {
+      if (c.date && c.status === "Collected") {
+        const parts = c.date.split(" ");
+        if (parts.length === 2) {
+          const monthIndex = standardMonths.indexOf(parts[0]);
+          const dayNum = parseInt(parts[1], 10);
+          if (monthIndex !== -1 && !isNaN(dayNum)) {
+            const collDate = new Date();
+            collDate.setMonth(monthIndex);
+            collDate.setDate(dayNum);
+            
+            // Set times to mid-day to normalize comparison
+            collDate.setHours(12, 0, 0, 0);
+            
+            const compareDate = new Date(endDate);
+            compareDate.setHours(12, 0, 0, 0);
+            
+            if (collDate > compareDate) {
+              endDate = collDate;
+            }
+          }
+        }
+      }
+    });
+    
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(endDate);
+      d.setDate(endDate.getDate() - i);
+      const dateLabel = `${standardMonths[d.getMonth()]} ${d.getDate()}`;
+      const dayNameShort = dayNames[d.getDay()];
+      const dayNameFull = fullDayNames[d.getDay()];
+      
+      const dailyCollected = collections
+        .filter(c => c.date === dateLabel && c.status === "Collected")
+        .reduce((sum, c) => sum + (c.amount || 0), 0);
+        
+      const target = (dayNameShort === "Sat" || dayNameShort === "Sun") ? 35000 : 30000;
+      
+      data.push({
+        day: dayNameShort,
+        collected: dailyCollected,
+        target,
+        date: `${dayNameFull}, ${dateLabel}`,
+      });
+    }
+    return data;
+  }, [collections]);
+
+  const maxCollectedScale = useMemo(() => {
+    const maxCollected = Math.max(...collectionsTrendData.map(d => d.collected), ...collectionsTrendData.map(d => d.target));
+    return maxCollected > 0 ? maxCollected * 1.1 : 55000;
+  }, [collectionsTrendData]);
+
+  const selectedDay = collectionsTrendData[selectedDayIndex] || { day: "", collected: 0, target: 30000, date: "" };
+  const percentDiff = selectedDay.target > 0 ? ((selectedDay.collected - selectedDay.target) / selectedDay.target) * 100 : 0;
   const isSurpassed = selectedDay.collected >= selectedDay.target;
   const diffText = `${isSurpassed ? "+" : ""}${percentDiff.toFixed(1)}%`;
+
+  if (loading) {
+    return (
+      <View style={[styles.page, { justifyContent: "center", alignItems: "center", backgroundColor: colors.bg }]}>
+        <ActivityIndicator size="large" color="#3366ff" />
+        <Text style={{ marginTop: 12, color: colors.bodyText, fontWeight: "600" }}>Loading dashboard analytics...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.page, { backgroundColor: colors.bg }]}>
@@ -123,6 +357,9 @@ export default function HomeScreen() {
             paddingHorizontal: isCompact ? 16 : 24,
           },
         ]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => loadDashboardData(true)} colors={["#3366ff"]} />
+        }
       >
         <View style={styles.header}>
           <View
@@ -133,7 +370,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.grid}>
-          {metrics.map((item) => (
+          {computedMetrics.map((item) => (
             <View
               key={item.title}
               style={[styles.metricCard, { width: cardWidth, backgroundColor: colors.cardBg }]}
@@ -193,7 +430,7 @@ export default function HomeScreen() {
           <View style={styles.interactiveChartContainer}>
             {collectionsTrendData.map((item, idx) => {
               const isActive = idx === selectedDayIndex;
-              const maxVal = 55000;
+              const maxVal = maxCollectedScale;
               const collectedHeight = Math.min((item.collected / maxVal) * 100, 100);
               const targetHeight = Math.min((item.target / maxVal) * 100, 100);
 
@@ -251,20 +488,36 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <Pressable
-          onPress={handleLogout}
-          disabled={loading}
-          style={({ pressed }) => [
-            styles.logoutBottomButton,
-            pressed && !loading && styles.buttonPressed,
-            loading && styles.logoutBottomButtonDisabled,
-          ]}
-          accessibilityLabel="Logout"
-        >
-          <Text style={styles.logoutBottomText}>
-            {loading ? "Signing out..." : "Logout"}
-          </Text>
-        </Pressable>
+
+        {/* Recent Activities Feed Section */}
+        <View style={[styles.sectionCard, { backgroundColor: colors.cardBg }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.titleText }]}>Recent Collections</Text>
+            <Text style={[styles.sectionCaption, { color: colors.bodyText }]}>Latest 3 payments registered to Appwrite</Text>
+          </View>
+          {recentCollections.length === 0 ? (
+            <Text style={[styles.emptySectionText, { color: colors.bodyText }]}>No collections recorded in the database yet.</Text>
+          ) : (
+            <View style={{ gap: 12 }}>
+              {recentCollections.map((item) => (
+                <View key={item.receiptId || item.$id} style={[styles.recentActivityRow, { backgroundColor: colors.detailCardBg, borderColor: colors.borderColor }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.recentCustomerName, { color: colors.titleText }]}>{item.customerName}</Text>
+                    <View style={{ flexDirection: "row", gap: 8, marginTop: 4, alignItems: "center" }}>
+                      <Text style={[styles.recentMetaText, { color: colors.subtleText }]}>{item.date} · {item.time}</Text>
+                      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.borderColor }} />
+                      <Text style={[styles.recentMetaText, { color: colors.subtleText }]}>{item.collectorName}</Text>
+                    </View>
+                  </View>
+                  <View style={{ alignItems: "flex-end", gap: 4 }}>
+                    <Text style={[styles.recentAmountText, { color: "#2ecc71" }]}>+ Rs. {item.amount?.toLocaleString()}</Text>
+                    <Text style={{ fontSize: 10, color: colors.subtleText, fontWeight: "600" }}>{item.receiptId}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       <BottomTabBar activeTab={activeTab} />
@@ -303,24 +556,6 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.85,
-  },
-  logoutBottomButton: {
-    marginTop: 20,
-    backgroundColor: "#3366ff",
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 0,
-    marginBottom: 16,
-  },
-  logoutBottomButtonDisabled: {
-    opacity: 0.6,
-  },
-  logoutBottomText: {
-    color: "#ffffff",
-    fontWeight: "700",
-    fontSize: 16,
   },
   tabBarContainer: {
     position: "absolute",
@@ -558,5 +793,33 @@ const styles = StyleSheet.create({
   chartDayLabelActive: {
     color: "#3366ff",
     fontWeight: "700",
+  },
+  emptySectionText: {
+    fontSize: 13,
+    textAlign: "center",
+    paddingVertical: 20,
+    fontStyle: "italic",
+  },
+
+  recentActivityRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  recentCustomerName: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  recentMetaText: {
+    fontSize: 11,
+    fontWeight: "500",
+  },
+  recentAmountText: {
+    fontSize: 14,
+    fontWeight: "800",
   },
 });
